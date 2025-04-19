@@ -1,39 +1,5 @@
-using System.Diagnostics;
-using Microsoft.Win32;
-using Microsoft.Win32.TaskScheduler;
-
 public class CustomContext : ApplicationContext
 {
-    string arguments = string.Join(" ",
-        "--wf-tcp=80,443",
-        "--wf-udp=443,50000-50100",
-        "--filter-udp=443",
-        "--hostlist=\"list-general.txt\"",
-        "--dpi-desync=fake",
-        "--dpi-desync-repeats=6",
-        $"--dpi-desync-fake-quic=\"{Path.Combine("bin", "quic_initial_www_google_com.bin")}\"",
-        "--new",
-        "--filter-udp=50000-50100",
-        "--ipset=\"ipset-discord.txt\"",
-        "--dpi-desync=fake",
-        "--dpi-desync-any-protocol",
-        "--dpi-desync-cutoff=d3",
-        "--dpi-desync-repeats=6",
-        "--new",
-        "--filter-tcp=80",
-        "--hostlist=\"list-general.txt\"",
-        "--dpi-desync=fake,split2",
-        "--dpi-desync-autottl=2",
-        "--dpi-desync-fooling=md5sig",
-        "--new",
-        "--filter-tcp=443",
-        "--hostlist=\"list-general.txt\"",
-        "--dpi-desync=fake,split",
-        "--dpi-desync-autottl=2",
-        "--dpi-desync-repeats=6",
-        "--dpi-desync-fooling=badseq",
-        $"--dpi-desync-fake-tls=\"{Path.Combine("bin", "tls_clienthello_www_google_com.bin")}\""
-    );
     NotifyIcon trayIcon;
     Process? runningProcess;
     Icon startedIcon = new Icon(Path.Combine(Application.StartupPath, "assets", "icon-green.ico"));
@@ -58,6 +24,12 @@ public class CustomContext : ApplicationContext
         contextMenu.Items.Add(statusItem);
         contextMenu.Items.Add(new ToolStripMenuItem("Запустить", null, (s, e) => StartBat()));
         contextMenu.Items.Add(new ToolStripMenuItem("Остановить", null, (s, e) => StopBat()));
+        contextMenu.Items.Add(new ToolStripMenuItem("Удалить из планировщика", null, (s, e) => {
+            RemoveFromTaskScheduler();
+            trayIcon.Visible = false;
+            StopBatWithoutMessage();
+            ExitThread();
+        }));
         contextMenu.Items.Add(new ToolStripMenuItem("Выход", null, (s, e) =>
         {
             trayIcon.Visible = false;
@@ -79,7 +51,7 @@ public class CustomContext : ApplicationContext
     private void UpdateStatus()
     {
         string statusText = GetStatus();
-         trayIcon.Text = "Статус: " + statusText;
+        trayIcon.Text = "Статус: " + statusText;
     
         if (statusItem != null)
             statusItem.Text = "Статус: " + statusText;
@@ -93,24 +65,23 @@ public class CustomContext : ApplicationContext
     private void StartBat()
     {
         if (runningProcess != null && !runningProcess.HasExited)
-    {
-        MessageBox.Show("Уже запущено", "Инфо");
-        return;
-    }
+        {
+            MessageBox.Show("Уже запущено", "Инфо");
+            return;
+        }
 
-    string binPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "zapret", "bin");
-    string exePath = Path.Combine(binPath, "winws.exe");
 
-    if (!File.Exists(exePath))
-    {
-        MessageBox.Show("winws.exe не найден", "Ошибка");
-        return;
-    }
+
+        if (!File.Exists(Constants.EXE_PATH))
+        {
+            MessageBox.Show("winws.exe не найден", "Ошибка");
+            return;
+        }
 
         var psi = new ProcessStartInfo
         {
-            FileName = exePath,
-            Arguments = arguments,
+            FileName = Constants.EXE_PATH,
+            Arguments = Constants.ARGUMENTS,
             WorkingDirectory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "zapret"),
             CreateNoWindow = true,
             UseShellExecute = false,
@@ -128,6 +99,7 @@ public class CustomContext : ApplicationContext
         {
             MessageBox.Show($"Ошибка при запуске: {ex.Message}", "Ошибка");
         }
+    
     }
 
 
@@ -161,9 +133,8 @@ public class CustomContext : ApplicationContext
             MessageBox.Show("Ошибка остановки: " + ex.Message, "Ошибка");
         }
     }
-    public static void AddToTaskScheduler()
+    private static void AddToTaskScheduler()
     {
-        string taskName = "zapretAutoStart";
         string exePath = Application.ExecutablePath;
 
         using (TaskService ts = new TaskService())
@@ -182,8 +153,21 @@ public class CustomContext : ApplicationContext
             td.Triggers.Add(new LogonTrigger());
 
             td.Actions.Add(new ExecAction(exePath, null, null));    
-            ts.RootFolder.RegisterTaskDefinition(taskName, td, TaskCreation.CreateOrUpdate, Environment.UserName, null, TaskLogonType.InteractiveToken);
+            ts.RootFolder.RegisterTaskDefinition(Constants.TASK_NAME, td, TaskCreation.CreateOrUpdate, Environment.UserName, null, TaskLogonType.InteractiveToken);
         }
     }
-
+    private static void RemoveFromTaskScheduler()
+    {
+        using (TaskService ts = new TaskService())
+        {
+            try
+            {
+                ts.RootFolder.DeleteTask(Constants.TASK_NAME, false);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Ошибка при удалении задачи: {ex.Message}");
+            }
+        }
+    }
 }
