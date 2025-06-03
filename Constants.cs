@@ -32,5 +32,5 @@ public class Constants
     public const string TASK_NAME = "zapretAutoStart";
     private static string BIT_PATH = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "zapret", "bin");
     public static string EXE_PATH = Path.Combine(BIT_PATH, "winws.exe");
-
+    public static string EXCEPTIONS_PATH = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "zapret", "list-general.txt");
 }

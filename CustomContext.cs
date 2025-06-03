@@ -4,8 +4,8 @@ public class CustomContext : ApplicationContext
     Process? runningProcess;
     Icon startedIcon = new Icon(Path.Combine(Application.StartupPath, "assets", "icon-green.ico"));
     Icon stoppedIcon = new Icon(Path.Combine(Application.StartupPath, "assets", "icon-red.ico"));
-
     ContextMenuStrip contextMenu = new();
+    ToolStripMenuItem additionalMenu = new("Дополнительно");
     ToolStripMenuItem statusItem;
     public CustomContext()
     {
@@ -30,6 +30,25 @@ public class CustomContext : ApplicationContext
             StopBatWithoutMessage();
             ExitThread();
         }));
+        
+        additionalMenu.DropDownItems.Add("Версия", null, (s, e) =>
+        {
+            MessageBox.Show("Версия 1.0.1", "О программе");
+        });
+
+        additionalMenu.DropDownItems.Add("Добавить исключения", null, (s, e) =>
+        {
+            string promptText = "Введите текст исключения:" + Environment.NewLine + "Пример: example.com";
+            string input = Microsoft.VisualBasic.Interaction.InputBox(promptText, "Добавить исключение", "");
+            MessageBox.Show(input, "Инфо");
+            if (!string.IsNullOrWhiteSpace(input))
+            {
+                AddExceptions(input);
+            }
+        });
+        
+        contextMenu.Items.Add(additionalMenu);
+        
         contextMenu.Items.Add(new ToolStripMenuItem("Выход", null, (s, e) =>
         {
             trayIcon.Visible = false;
@@ -60,6 +79,14 @@ public class CustomContext : ApplicationContext
 
         trayIcon.Icon = isRunning ? startedIcon : stoppedIcon;
 
+    }
+
+    private void AddExceptions(string text)
+    {
+        File.AppendAllText(Constants.EXCEPTIONS_PATH, text + Environment.NewLine);
+        StopBatWithoutMessage();
+        Thread.Sleep(2000);
+        StartBat();
     }
 
     private void StartBat()
@@ -99,7 +126,7 @@ public class CustomContext : ApplicationContext
         {
             MessageBox.Show($"Ошибка при запуске: {ex.Message}", "Ошибка");
         }
-    
+
     }
 
 
@@ -107,7 +134,6 @@ public class CustomContext : ApplicationContext
     {
         if (runningProcess == null || runningProcess.HasExited)
         {
-            MessageBox.Show("Скрипт не запущен", "Инфо");
             return;
         }
 
