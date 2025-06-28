@@ -2,4 +2,4 @@
 
 Чтобы запустить проект склонируйте его к себе скачайте zapretapp.exe и запустите его едионжды далее он будет запускаться при запуске компьютера
 
-Проект основан на [https://github.com/Flowseal/zapret-discord-youtube](zapret by Flowseal)
+Проект основан на (https://github.com/Flowseal/zapret-discord-youtube)[zapret by Flowseal]
